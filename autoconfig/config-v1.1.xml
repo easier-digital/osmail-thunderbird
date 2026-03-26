@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Thunderbird autoconfig for osmail.ca
+  Host at: https://autoconfig.osmail.ca/mail/config-v1.1.xml
+  DNS: CNAME autoconfig.osmail.ca -> your hosting server
+  Content-Type: text/xml; charset=utf-8
+
+  NOTE: OAuth2 authentication requires the thunderbird-custom-idp add-on
+  to register the Authentik provider at runtime. Without the add-on,
+  Thunderbird will fall back to password-cleartext.
+
+  NOTE: CalDAV/CardDAV elements are included for forward-compatibility
+  but are not currently parsed by Thunderbird. Users must configure
+  calendar/contacts manually or via well-known URI discovery.
+-->
+<clientConfig version="1.1">
+  <emailProvider id="osmail.ca">
+    <domain>osmail.ca</domain>
+    <displayName>OSMail</displayName>
+    <displayShortName>OSMail</displayShortName>
+
+    <incomingServer type="imap">
+      <hostname>mx.osmail.ca</hostname>
+      <port>993</port>
+      <socketType>SSL</socketType>
+      <username>%EMAILADDRESS%</username>
+      <authentication>OAuth2</authentication>
+      <authentication>password-cleartext</authentication>
+    </incomingServer>
+
+    <outgoingServer type="smtp">
+      <hostname>mx.osmail.ca</hostname>
+      <port>587</port>
+      <socketType>STARTTLS</socketType>
+      <username>%EMAILADDRESS%</username>
+      <authentication>OAuth2</authentication>
+      <authentication>password-cleartext</authentication>
+    </outgoingServer>
+
+    <!-- Forward-compatibility: not currently parsed by Thunderbird -->
+    <addressBook type="carddav">
+      <hostname>https://hub.osmail.ca/remote.php/dav/</hostname>
+      <username>%EMAILADDRESS%</username>
+      <authentication>OAuth2</authentication>
+    </addressBook>
+
+    <calendar type="caldav">
+      <hostname>https://hub.osmail.ca/remote.php/dav/</hostname>
+      <username>%EMAILADDRESS%</username>
+      <authentication>OAuth2</authentication>
+    </calendar>
+
+  </emailProvider>
+</clientConfig>

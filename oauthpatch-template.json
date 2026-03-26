@@ -1,0 +1,14 @@
+{
+  "hostname": "mx.osmail.ca",
+  "issuer": "auth.osmail.ca",
+  "clientId": "thunderbird",
+  "clientSecret": "__OAUTH_CLIENT_SECRET__",
+  "usePkce": true,
+  "authorizationEndpoint": "https://auth.osmail.ca/application/o/thunderbird/authorize/",
+  "tokenEndpoint": "https://auth.osmail.ca/application/o/thunderbird/token/",
+  "redirectUri": "https://localhost",
+  "scopes": {
+    "imap": "openid email profile",
+    "smtp": "openid email profile"
+  }
+}

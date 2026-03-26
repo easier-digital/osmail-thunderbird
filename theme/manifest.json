@@ -1,0 +1,36 @@
+{
+  "manifest_version": 2,
+  "name": "OSMail Theme",
+  "version": "1.0.0",
+  "description": "OSMail branded theme for Thunderbird",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "yourorg-theme@osmail.ca",
+      "strict_min_version": "140.0"
+    }
+  },
+  "theme": {
+    "colors": {
+      "frame": "#1A1A2E",
+      "tab_background_text": "#D1D1D8",
+      "toolbar": "#F4F4F6",
+      "toolbar_text": "#1A1A2E",
+      "tab_selected": "#F4F4F6",
+      "tab_text": "#1A1A2E",
+      "toolbar_field": "#FFFFFF",
+      "toolbar_field_text": "#1A1A2E",
+      "toolbar_field_border": "#D1D1D8",
+      "button_background_hover": "#EDE9FD",
+      "button_background_active": "#7C3AED",
+      "popup": "#FFFFFF",
+      "popup_text": "#1A1A2E",
+      "popup_highlight": "#7C3AED",
+      "popup_highlight_text": "#FFFFFF",
+      "sidebar": "#F4F4F6",
+      "sidebar_text": "#1A1A2E",
+      "sidebar_highlight": "#7C3AED",
+      "sidebar_highlight_text": "#FFFFFF",
+      "sidebar_border": "#D1D1D8"
+    }
+  }
+}

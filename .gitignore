@@ -1,0 +1,6 @@
+distribution/extensions/*.xpi
+distribution/oauthpatch.json
+staging/
+*.msi
+*.log
+*.zip

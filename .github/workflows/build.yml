@@ -1,0 +1,175 @@
+name: Build OSMail Thunderbird Installer
+on:
+  workflow_dispatch:
+    inputs:
+      thunderbird_version:
+        description: 'Thunderbird version to build'
+        required: false
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - 'distribution/**'
+      - 'theme/**'
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Job 1: Build Theme XPI ──────────────────────────────────
+  build-theme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate theme manifest
+        run: python3 -m json.tool theme/manifest.json > /dev/null
+
+      - name: Build theme XPI
+        run: |
+          chmod +x theme/build.sh
+          theme/build.sh
+
+      - name: Record SHA256
+        id: theme-hash
+        run: |
+          SHA=$(sha256sum distribution/extensions/yourorg-theme.xpi | awk '{print $1}')
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "Theme XPI SHA256: $SHA"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: theme-xpi
+          path: distribution/extensions/yourorg-theme.xpi
+
+  # ── Job 2: Build Installer Package ─────────────────────────
+  build-installer:
+    runs-on: windows-latest
+    needs: build-theme
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Mask secret
+        run: echo "::add-mask::${{ secrets.OAUTH_CLIENT_SECRET }}"
+
+      - name: Determine version
+        id: version
+        shell: pwsh
+        run: |
+          $ver = "${{ inputs.thunderbird_version }}"
+          if (-not $ver) {
+            $ver = (Get-Content .thunderbird-version -Raw).Trim()
+          }
+          echo "tb_version=$ver" >> $env:GITHUB_OUTPUT
+          Write-Host "Building for Thunderbird $ver"
+
+      - name: Create staging directory
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path staging/distribution/extensions -Force
+          New-Item -ItemType Directory -Path staging/distribution -Force
+
+      - name: Download theme XPI
+        uses: actions/download-artifact@v4
+        with:
+          name: theme-xpi
+          path: staging/distribution/extensions/
+
+      - name: Download Thunderbird MSI
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.version.outputs.tb_version }}"
+          $url = "https://releases.mozilla.org/pub/thunderbird/releases/$ver/win64/en-US/Thunderbird%20Setup%20$ver.msi"
+          Write-Host "Downloading: $url"
+          Invoke-WebRequest -Uri $url -OutFile "staging/Thunderbird Setup $ver.msi" -UseBasicParsing
+          $size = (Get-Item "staging/Thunderbird Setup $ver.msi").Length
+          if ($size -eq 0) {
+            Write-Error "MSI download failed — file is empty"
+            exit 1
+          }
+          Write-Host "MSI downloaded: $size bytes"
+
+      - name: Substitute OAuth secret
+        shell: pwsh
+        run: |
+          $template = Get-Content oauthpatch-template.json -Raw
+          $patched = $template.Replace('__OAUTH_CLIENT_SECRET__', '${{ secrets.OAUTH_CLIENT_SECRET }}')
+          Set-Content -Path staging/distribution/oauthpatch.json -Value $patched -NoNewline
+
+      - name: Copy distribution files
+        shell: pwsh
+        run: |
+          Copy-Item distribution/policies.json staging/distribution/ -Force
+          if (Test-Path distribution/extensions/.gitkeep) {
+            Copy-Item distribution/extensions/.gitkeep staging/distribution/extensions/ -Force
+          }
+
+      - name: Copy installer and version file
+        shell: pwsh
+        run: |
+          Copy-Item installer/install.ps1 staging/ -Force
+          Copy-Item .thunderbird-version staging/ -Force
+
+      - name: Package zip
+        shell: pwsh
+        id: package
+        run: |
+          $ver = "${{ steps.version.outputs.tb_version }}"
+          $zipName = "thunderbird-osmail-$ver-win64.zip"
+          Compress-Archive -Path staging/* -DestinationPath $zipName -Force
+          $hash = (Get-FileHash $zipName -Algorithm SHA256).Hash
+          echo "zip_sha256=$hash" >> $env:GITHUB_OUTPUT
+          echo "zip_name=$zipName" >> $env:GITHUB_OUTPUT
+          Write-Host "Package SHA256: $hash"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-package
+          path: ${{ steps.package.outputs.zip_name }}
+
+  # ── Job 3: Create GitHub Release ───────────────────────────
+  release:
+    runs-on: ubuntu-latest
+    needs: build-installer
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          VER="${{ inputs.thunderbird_version }}"
+          if [ -z "$VER" ]; then
+            VER=$(cat .thunderbird-version | tr -d '[:space:]')
+          fi
+          echo "tb_version=$VER" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: installer-package
+          path: dist/
+
+      - name: Compute SHA256
+        id: hash
+        run: |
+          SHA=$(sha256sum dist/*.zip | awk '{print $1}')
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.tb_version }}-osmail
+          name: OSMail Thunderbird ${{ steps.version.outputs.tb_version }}
+          body: |
+            ## OSMail Thunderbird ${{ steps.version.outputs.tb_version }}
+
+            **Upstream Thunderbird version**: ${{ steps.version.outputs.tb_version }}
+            **Build date (UTC)**: ${{ github.event.repository.updated_at || 'see workflow run' }}
+            **SHA256**: `${{ steps.hash.outputs.sha256 }}`
+
+            ### Deployment
+            Download the zip, extract, and run `install.ps1` as Administrator.
+            The installer deploys Thunderbird with OSMail enterprise configuration,
+            including OAuth2 authentication via Authentik and the OSMail brand theme.
+            For Atera RMM deployment, use the PowerShell snippet in the README.
+          files: dist/*.zip

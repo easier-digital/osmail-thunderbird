@@ -1,0 +1,61 @@
+name: Check Upstream Thunderbird Version
+on:
+  schedule:
+    - cron: '0 8 * * 1'  # Monday 08:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch latest Thunderbird version
+        id: fetch
+        run: |
+          UPSTREAM=$(curl -sf https://product-details.mozilla.org/1.0/thunderbird_versions.json \
+            | jq -r '.LATEST_THUNDERBIRD_VERSION')
+          echo "upstream=$UPSTREAM" >> "$GITHUB_OUTPUT"
+          echo "Upstream version: $UPSTREAM"
+
+      - name: Version gate (minimum 140.0)
+        run: |
+          UPSTREAM="${{ steps.fetch.outputs.upstream }}"
+          MAJOR=$(echo "$UPSTREAM" | cut -d. -f1)
+          if [ "$MAJOR" -lt 140 ]; then
+            echo "::error::Upstream version $UPSTREAM is below minimum required 140.0 for thunderbird-custom-idp compatibility"
+            exit 1
+          fi
+
+      - name: Compare with pinned version
+        id: compare
+        run: |
+          PINNED=$(cat .thunderbird-version | tr -d '[:space:]')
+          UPSTREAM="${{ steps.fetch.outputs.upstream }}"
+          echo "Pinned: $PINNED, Upstream: $UPSTREAM"
+          if [ "$PINNED" = "$UPSTREAM" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update pinned version
+        if: steps.compare.outputs.changed == 'true'
+        run: |
+          printf '%s' "${{ steps.fetch.outputs.upstream }}" > .thunderbird-version
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .thunderbird-version
+          git commit -m "chore: bump Thunderbird to ${{ steps.fetch.outputs.upstream }}"
+          git push
+
+      - name: Trigger build
+        if: steps.compare.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run build.yml \
+            -f thunderbird_version="${{ steps.fetch.outputs.upstream }}"

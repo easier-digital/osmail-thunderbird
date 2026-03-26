@@ -1,0 +1,30 @@
+{
+  "_comment": "SETUP REQUIRED: Replace YOUR_ORG with your GitHub org. Replace __THEME_XPI_URL__ after first build.",
+  "policies": {
+    "DisableAppUpdate": true,
+    "AppUpdateURL": "https://github.com/YOUR_ORG/thunderbird-osmail/releases",
+    "DisableTelemetry": true,
+    "OfferToSaveLogins": false,
+    "PasswordManagerEnabled": false,
+    "ExtensionSettings": {
+      "yourorg-theme@osmail.ca": {
+        "installation_mode": "force_installed",
+        "install_url": "__THEME_XPI_URL__"
+      },
+      "thunderbird-custom-idp@raa": {
+        "installation_mode": "force_installed",
+        "install_url": "https://github.com/YOUR_ORG/thunderbird-osmail/releases/latest/download/thunderbird_custom_idp.xpi"
+      }
+    },
+    "Preferences": {
+      "mail.phishing.detection.enabled": {
+        "Value": true,
+        "Status": "locked"
+      },
+      "toolkit.legacyUserProfileCustomizations.stylesheets": {
+        "Value": false,
+        "Status": "locked"
+      }
+    }
+  }
+}
