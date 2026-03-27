@@ -112,38 +112,42 @@ var osmail = class extends ExtensionAPI {
             }
 
             // ── SMTP ──
+            // Use direct pref writes to avoid WrappedNative issues with
+            // outgoing server property setters
             console.log(`[OSMail] Creating SMTP server: ${config.smtpHost}:${config.smtpPort}`);
             try {
-              const smtpServer = MailServices.outgoingServer.createServer("smtp");
-              console.log(`[OSMail] SMTP server object created, key=${smtpServer.key}`);
+              // Find next available smtp key
+              const existingKeys = Services.prefs.getCharPref("mail.smtpservers", "");
+              let smtpNum = 1;
+              let smtpKey;
+              do {
+                smtpKey = `smtp${smtpNum++}`;
+              } while (existingKeys.includes(smtpKey));
 
-              smtpServer.username = email;
-              console.log(`[OSMail] SMTP username set: ${email}`);
+              // Write all prefs directly
+              const prefix = `mail.smtpserver.${smtpKey}`;
+              Services.prefs.setCharPref(`${prefix}.type`, "smtp");
+              Services.prefs.setCharPref(`${prefix}.hostname`, config.smtpHost);
+              Services.prefs.setIntPref(`${prefix}.port`, config.smtpPort || 587);
+              Services.prefs.setCharPref(`${prefix}.username`, email);
+              Services.prefs.setIntPref(`${prefix}.try_ssl`, config.smtpSocketType || 2);
+              Services.prefs.setIntPref(`${prefix}.authMethod`, authMethod);
+              Services.prefs.setCharPref(`${prefix}.description`, "OSMail");
 
-              smtpServer.hostname = config.smtpHost;
-              console.log(`[OSMail] SMTP hostname set: ${config.smtpHost}`);
+              // Register in the server list
+              const newKeys = existingKeys ? `${existingKeys},${smtpKey}` : smtpKey;
+              Services.prefs.setCharPref("mail.smtpservers", newKeys);
 
-              smtpServer.port = config.smtpPort || 587;
-              console.log(`[OSMail] SMTP port set: ${smtpServer.port}`);
+              // Set as default
+              Services.prefs.setCharPref("mail.smtp.defaultserver", smtpKey);
 
-              smtpServer.socketType = config.smtpSocketType || 2;
-              console.log(`[OSMail] SMTP socketType set: ${smtpServer.socketType}`);
-
-              smtpServer.authMethod = authMethod;
-              console.log(`[OSMail] SMTP authMethod set: ${smtpServer.authMethod}`);
-
+              // Link identity to this SMTP server
               if (identity) {
-                identity.smtpServerKey = smtpServer.key;
-                console.log(`[OSMail] Identity linked to SMTP: ${smtpServer.key}`);
+                identity.smtpServerKey = smtpKey;
+                console.log(`[OSMail] Identity linked to SMTP: ${smtpKey}`);
               }
 
-              try {
-                MailServices.outgoingServer.defaultServer = smtpServer;
-              } catch (e) {
-                console.log("[OSMail] Could not set default outgoing server:", e.message);
-              }
-
-              console.log(`[OSMail] SMTP server complete: host=${smtpServer.hostname} port=${smtpServer.port} auth=${smtpServer.authMethod} socket=${smtpServer.socketType}`);
+              console.log(`[OSMail] SMTP server created via prefs: ${smtpKey} host=${config.smtpHost} port=${config.smtpPort} auth=${authMethod} socket=${config.smtpSocketType}`);
             } catch (e) {
               errors.push("SMTP: " + e.message);
               console.error("[OSMail] SMTP creation failed:", e);
