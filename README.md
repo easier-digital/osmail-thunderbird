@@ -28,7 +28,6 @@ Produces a Windows wrapper installer (PowerShell + official Thunderbird MSI) tha
 3. Place a 64x64 PNG logo at `theme/icons/logo.png`.
 4. Host `autoconfig/config-v1.1.xml` at `https://autoconfig.osmail.ca/mail/config-v1.1.xml`.
 5. Trigger the first build: `gh workflow run build.yml`
-6. After the first release, update `__THEME_XPI_URL__` in `policies.json` with the theme XPI asset URL.
 
 ## Deployment via Atera RMM
 

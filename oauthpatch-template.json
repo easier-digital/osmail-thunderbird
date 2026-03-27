@@ -1,6 +1,6 @@
 {
   "hostname": "mx.osmail.ca",
-  "issuer": "https://auth.osmail.ca/application/o/thunderbird/",
+  "issuer": "auth.osmail.ca",
   "clientId": "thunderbird",
   "clientSecret": "__OAUTH_CLIENT_SECRET__",
   "usePkce": true,
