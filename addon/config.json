@@ -10,5 +10,21 @@
   "scopes": {
     "imap": "openid email profile",
     "smtp": "openid email profile"
+  },
+  "imap": {
+    "hostname": "mx.osmail.ca",
+    "port": 993,
+    "socketType": 3
+  },
+  "smtp": {
+    "hostname": "mx.osmail.ca",
+    "port": 587,
+    "socketType": 2
+  },
+  "caldav": {
+    "baseUrl": "https://hub.osmail.ca/remote.php/dav"
+  },
+  "carddav": {
+    "baseUrl": "https://hub.osmail.ca/remote.php/dav"
   }
 }

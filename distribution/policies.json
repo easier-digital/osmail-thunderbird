@@ -12,8 +12,11 @@
         "install_url": "https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/osmail-theme.xpi"
       },
       "thunderbird-custom-idp@raa": {
+        "installation_mode": "blocked"
+      },
+      "osmail-onboarding@osmail.ca": {
         "installation_mode": "force_installed",
-        "install_url": "https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/thunderbird-custom-idp%40raa.xpi"
+        "install_url": "https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/osmail-onboarding.xpi"
       }
     },
     "Preferences": {

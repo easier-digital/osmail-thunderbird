@@ -87,23 +87,17 @@ if (Test-Path $srcDistDir) {
     if (Test-Path $policiesPath) {
         $extDir = Join-Path $tbDistDir 'extensions'
         $policiesJson = Get-Content $policiesPath -Raw
-        $themeXpi = Join-Path $extDir 'osmail-theme@osmail.ca.xpi'
-        $idpXpi = Join-Path $extDir 'thunderbird-custom-idp@raa.xpi'
-        if (Test-Path $themeXpi) {
-            $themeUri = 'file:///' + $themeXpi.Replace('\', '/')
-            $policiesJson = $policiesJson.Replace(
-                'https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/osmail-theme.xpi',
-                $themeUri
-            )
-            Write-Log "Theme install_url set to: $themeUri"
+        $extensions = @{
+            'osmail-theme@osmail.ca.xpi' = 'https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/osmail-theme.xpi'
+            'osmail-onboarding@osmail.ca.xpi' = 'https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/osmail-onboarding.xpi'
         }
-        if (Test-Path $idpXpi) {
-            $idpUri = 'file:///' + $idpXpi.Replace('\', '/')
-            $policiesJson = $policiesJson.Replace(
-                'https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/thunderbird-custom-idp%40raa.xpi',
-                $idpUri
-            )
-            Write-Log "custom-idp install_url set to: $idpUri"
+        foreach ($xpiFile in $extensions.Keys) {
+            $xpiPath = Join-Path $extDir $xpiFile
+            if (Test-Path $xpiPath) {
+                $fileUri = 'file:///' + $xpiPath.Replace('\', '/')
+                $policiesJson = $policiesJson.Replace($extensions[$xpiFile], $fileUri)
+                Write-Log "Extension $xpiFile install_url set to: $fileUri"
+            }
         }
         Set-Content -Path $policiesPath -Value $policiesJson -NoNewline
         Write-Log 'policies.json updated with local file:/// URLs.'

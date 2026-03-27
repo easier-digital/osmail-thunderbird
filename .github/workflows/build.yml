@@ -11,13 +11,14 @@ on:
     paths:
       - 'distribution/**'
       - 'theme/**'
+      - 'addon/**'
 
 permissions:
   contents: write
 
 jobs:
-  # ── Job 1: Build Theme XPI ──────────────────────────────────
-  build-theme:
+  # ── Job 1: Build Extensions (ubuntu) ─────────────────────────
+  build-extensions:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,27 +26,38 @@ jobs:
       - name: Validate theme manifest
         run: python3 -m json.tool theme/manifest.json > /dev/null
 
+      - name: Validate addon manifest
+        run: python3 -m json.tool addon/manifest.json > /dev/null
+
       - name: Build theme XPI
         run: |
           chmod +x theme/build.sh
           theme/build.sh
 
-      - name: Record SHA256
-        id: theme-hash
+      - name: Build onboarding XPI
         run: |
-          SHA=$(sha256sum distribution/extensions/osmail-theme.xpi | awk '{print $1}')
-          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
-          echo "Theme XPI SHA256: $SHA"
+          cp theme/icons/logo.png addon/icons/icon-64.png
+          cd addon
+          zip -r ../distribution/extensions/osmail-onboarding.xpi \
+            manifest.json background.js config.json \
+            onboarding/ experiments/ icons/
+          echo "SHA256: $(sha256sum ../distribution/extensions/osmail-onboarding.xpi)"
+          echo "Onboarding XPI built successfully."
 
       - uses: actions/upload-artifact@v4
         with:
           name: theme-xpi
           path: distribution/extensions/osmail-theme.xpi
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: onboarding-xpi
+          path: distribution/extensions/osmail-onboarding.xpi
+
   # ── Job 2: Build Installer Package ─────────────────────────
   build-installer:
     runs-on: windows-latest
-    needs: build-theme
+    needs: build-extensions
     steps:
       - uses: actions/checkout@v4
 
@@ -67,24 +79,36 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path staging/distribution/extensions -Force
-          New-Item -ItemType Directory -Path staging/distribution -Force
 
-      - name: Download theme XPI
+      - name: Download extension artifacts
         uses: actions/download-artifact@v4
         with:
           name: theme-xpi
           path: staging/distribution/extensions/
 
-      - name: Build thunderbird-custom-idp XPI with baked config
+      - uses: actions/download-artifact@v4
+        with:
+          name: onboarding-xpi
+          path: staging/distribution/extensions/
+
+      - name: Bake OAuth secret into onboarding XPI
         shell: pwsh
         run: |
-          git clone --depth 1 https://github.com/raa-org/thunderbird-custom-idp.git custom-idp-src
-          $template = Get-Content oauthpatch-template.json -Raw
-          $config = $template.Replace('__OAUTH_CLIENT_SECRET__', '${{ secrets.OAUTH_CLIENT_SECRET }}')
-          Set-Content -Path custom-idp-src/src/config.json -Value $config -NoNewline
-          Compress-Archive -Path custom-idp-src/src/* -DestinationPath staging/distribution/extensions/thunderbird-custom-idp.xpi -Force
-          $size = (Get-Item "staging/distribution/extensions/thunderbird-custom-idp.xpi").Length
-          Write-Host "custom-idp XPI built with baked config: $size bytes"
+          $xpiPath = "staging/distribution/extensions/osmail-onboarding.xpi"
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [System.IO.Compression.ZipFile]::Open($xpiPath, 'Update')
+          $entry = $zip.GetEntry('config.json')
+          $reader = New-Object System.IO.StreamReader($entry.Open())
+          $content = $reader.ReadToEnd()
+          $reader.Close()
+          $patched = $content.Replace('__OAUTH_CLIENT_SECRET__', '${{ secrets.OAUTH_CLIENT_SECRET }}')
+          $entry.Delete()
+          $newEntry = $zip.CreateEntry('config.json')
+          $writer = New-Object System.IO.StreamWriter($newEntry.Open())
+          $writer.Write($patched)
+          $writer.Close()
+          $zip.Dispose()
+          Write-Host "OAuth secret baked into onboarding XPI"
 
       - name: Download Thunderbird MSI
         shell: pwsh
@@ -100,11 +124,11 @@ jobs:
           }
           Write-Host "MSI downloaded: $size bytes"
 
-      - name: Rename XPIs to extension IDs for sideloading
+      - name: Rename XPIs to extension IDs
         shell: pwsh
         run: |
           Rename-Item "staging/distribution/extensions/osmail-theme.xpi" "osmail-theme@osmail.ca.xpi"
-          Rename-Item "staging/distribution/extensions/thunderbird-custom-idp.xpi" "thunderbird-custom-idp@raa.xpi"
+          Rename-Item "staging/distribution/extensions/osmail-onboarding.xpi" "osmail-onboarding@osmail.ca.xpi"
 
       - name: Copy distribution files
         shell: pwsh
@@ -134,11 +158,6 @@ jobs:
           name: installer-package
           path: ${{ steps.package.outputs.zip_name }}
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: custom-idp-xpi
-          path: staging/distribution/extensions/thunderbird-custom-idp@raa.xpi
-
   # ── Job 3: Create GitHub Release ───────────────────────────
   release:
     runs-on: ubuntu-latest
@@ -159,16 +178,6 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: installer-package
-          path: dist/
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: theme-xpi
-          path: dist/
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: custom-idp-xpi
           path: dist/
 
       - name: Compute SHA256
@@ -193,8 +202,10 @@ jobs:
             Download the zip, extract, and run `install.ps1` as Administrator.
             The installer deploys Thunderbird with OSMail enterprise configuration,
             including OAuth2 authentication via Authentik and the OSMail brand theme.
-            For Atera RMM deployment, use the PowerShell snippet in the README.
-          files: |
-            dist/*.zip
-            dist/osmail-theme.xpi
-            dist/thunderbird-custom-idp@raa.xpi
+
+            ### What's included
+            - Thunderbird ${{ steps.version.outputs.tb_version }} MSI
+            - OSMail onboarding wizard (auto-configures email, calendar, contacts)
+            - OSMail branded theme
+            - Enterprise policies (updates disabled, telemetry off)
+          files: dist/*.zip

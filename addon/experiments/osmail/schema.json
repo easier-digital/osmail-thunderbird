@@ -1,0 +1,106 @@
+[
+  {
+    "namespace": "osmail",
+    "functions": [
+      {
+        "name": "registerOAuthProvider",
+        "type": "function",
+        "async": true,
+        "description": "Register an OAuth2 provider with Thunderbird.",
+        "parameters": [
+          {
+            "name": "config",
+            "type": "object",
+            "properties": {
+              "issuer": { "type": "string" },
+              "clientId": { "type": "string" },
+              "clientSecret": { "type": "string" },
+              "authorizationEndpoint": { "type": "string" },
+              "tokenEndpoint": { "type": "string" },
+              "redirectUri": { "type": "string" },
+              "usePkce": { "type": "boolean" },
+              "hostnames": { "type": "array", "items": { "type": "string" } },
+              "scopes": { "type": "string" }
+            }
+          }
+        ]
+      },
+      {
+        "name": "createMailAccount",
+        "type": "function",
+        "async": true,
+        "description": "Create an IMAP+SMTP mail account.",
+        "parameters": [
+          {
+            "name": "email",
+            "type": "string"
+          },
+          {
+            "name": "config",
+            "type": "object",
+            "properties": {
+              "imapHost": { "type": "string" },
+              "imapPort": { "type": "integer" },
+              "imapSocketType": { "type": "integer" },
+              "smtpHost": { "type": "string" },
+              "smtpPort": { "type": "integer" },
+              "smtpSocketType": { "type": "integer" },
+              "authMethod": { "type": "integer" }
+            }
+          }
+        ]
+      },
+      {
+        "name": "createCalDAV",
+        "type": "function",
+        "async": true,
+        "description": "Create a CalDAV calendar.",
+        "parameters": [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "url",
+            "type": "string"
+          },
+          {
+            "name": "username",
+            "type": "string"
+          },
+          {
+            "name": "color",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "name": "createCardDAV",
+        "type": "function",
+        "async": true,
+        "description": "Create a CardDAV address book.",
+        "parameters": [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "url",
+            "type": "string"
+          },
+          {
+            "name": "username",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "name": "getAccountCount",
+        "type": "function",
+        "async": true,
+        "description": "Get the number of configured mail accounts.",
+        "parameters": []
+      }
+    ]
+  }
+]
