@@ -47,7 +47,7 @@ Filename: "msiexec.exe"; Parameters: "/i ""{tmp}\{code:GetMSIName}"" /qn INSTALL
 
 [Code]
 var
-  TBVersion: AnsiString;
+  TBVersion: String;
 
 function GetMSIName(Param: String): String;
 begin
@@ -60,32 +60,50 @@ begin
   Result := True;
 end;
 
+function ReadFileAsString(FileName: String): String;
+var
+  Lines: TArrayOfString;
+  I: Integer;
+begin
+  Result := '';
+  if LoadStringsFromFile(FileName, Lines) then
+    for I := 0 to GetArrayLength(Lines) - 1 do
+    begin
+      if I > 0 then
+        Result := Result + #13#10;
+      Result := Result + Lines[I];
+    end;
+end;
+
+procedure WriteStringToFile(FileName: String; Content: String);
+var
+  Lines: TArrayOfString;
+begin
+  SetArrayLength(Lines, 1);
+  Lines[0] := Content;
+  SaveStringsToFile(FileName, Lines, False);
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  VersionFile: String;
   PoliciesFile: String;
-  PoliciesContent: AnsiString;
-  ExtDir: AnsiString;
-  ThemeXPI: AnsiString;
-  OnboardingXPI: AnsiString;
-  ThemeURI: AnsiString;
-  OnboardingURI: AnsiString;
-  GHTheme: AnsiString;
-  GHOnboarding: AnsiString;
+  PoliciesContent: String;
+  ExtDir: String;
+  ThemeXPI: String;
+  OnboardingXPI: String;
+  ThemeURI: String;
+  OnboardingURI: String;
 begin
   if CurStep = ssPostInstall then
   begin
     { Read version }
-    VersionFile := ExpandConstant('{tmp}\.thunderbird-version');
-    if FileExists(VersionFile) then
-      LoadStringFromFile(VersionFile, TBVersion);
-    TBVersion := Trim(TBVersion);
+    TBVersion := Trim(ReadFileAsString(ExpandConstant('{tmp}\.thunderbird-version')));
 
     { Rewrite policies.json with file:/// URLs }
     PoliciesFile := ExpandConstant('{app}\distribution\policies.json');
     if FileExists(PoliciesFile) then
     begin
-      LoadStringFromFile(PoliciesFile, PoliciesContent);
+      PoliciesContent := ReadFileAsString(PoliciesFile);
       ExtDir := ExpandConstant('{app}\distribution\extensions');
 
       ThemeXPI := ExtDir + '\osmail-theme@osmail.ca.xpi';
@@ -94,34 +112,34 @@ begin
       if FileExists(ThemeXPI) then
       begin
         ThemeURI := 'file:///' + ThemeXPI;
-        StringChangeEx(ThemeURI, '\', '/', True);
-        GHTheme := 'https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/osmail-theme.xpi';
-        StringChangeEx(PoliciesContent, GHTheme, ThemeURI, True);
+        StringChange(ThemeURI, '\', '/');
+        StringChange(PoliciesContent,
+          'https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/osmail-theme.xpi',
+          ThemeURI);
       end;
 
       if FileExists(OnboardingXPI) then
       begin
         OnboardingURI := 'file:///' + OnboardingXPI;
-        StringChangeEx(OnboardingURI, '\', '/', True);
-        GHOnboarding := 'https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/osmail-onboarding.xpi';
-        StringChangeEx(PoliciesContent, GHOnboarding, OnboardingURI, True);
+        StringChange(OnboardingURI, '\', '/');
+        StringChange(PoliciesContent,
+          'https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/osmail-onboarding.xpi',
+          OnboardingURI);
       end;
 
-      SaveStringToFile(PoliciesFile, PoliciesContent, False);
+      WriteStringToFile(PoliciesFile, PoliciesContent);
     end;
   end;
 end;
 
 procedure CurPageChanged(CurPageID: Integer);
 begin
-  { Read version early for MSI filename }
   if CurPageID = wpReady then
   begin
     if TBVersion = '' then
     begin
       ExtractTemporaryFile('.thunderbird-version');
-      LoadStringFromFile(ExpandConstant('{tmp}\.thunderbird-version'), TBVersion);
-      TBVersion := Trim(TBVersion);
+      TBVersion := Trim(ReadFileAsString(ExpandConstant('{tmp}\.thunderbird-version')));
     end;
   end;
 end;
