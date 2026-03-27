@@ -149,6 +149,11 @@ jobs:
           name: installer-package
           path: dist/
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: theme-xpi
+          path: dist/
+
       - name: Compute SHA256
         id: hash
         run: |
@@ -172,4 +177,6 @@ jobs:
             The installer deploys Thunderbird with OSMail enterprise configuration,
             including OAuth2 authentication via Authentik and the OSMail brand theme.
             For Atera RMM deployment, use the PowerShell snippet in the README.
-          files: dist/*.zip
+          files: |
+            dist/*.zip
+            dist/yourorg-theme.xpi

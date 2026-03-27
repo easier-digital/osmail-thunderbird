@@ -1,5 +1,5 @@
 {
-  "_comment": "SETUP REQUIRED: Replace __THEME_XPI_URL__ after first build.",
+  "_comment": "OSMail enterprise policies for Thunderbird",
   "policies": {
     "DisableAppUpdate": true,
     "AppUpdateURL": "https://github.com/easier-digital/osmail-thunderbird/releases",
@@ -9,7 +9,7 @@
     "ExtensionSettings": {
       "yourorg-theme@osmail.ca": {
         "installation_mode": "force_installed",
-        "install_url": "__THEME_XPI_URL__"
+        "install_url": "https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/yourorg-theme.xpi"
       },
       "thunderbird-custom-idp@raa": {
         "installation_mode": "force_installed",
