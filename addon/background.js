@@ -39,11 +39,16 @@ async function init() {
     console.error("[OSMail] OAuth registration failed:", e);
   }
 
-  // Check if onboarding is needed
-  const accountCount = await browser.osmail.getAccountCount();
+  // Check if onboarding is needed — use storage flag as primary check
   const storage = await browser.storage.local.get("onboardingComplete");
 
-  if (accountCount === 0 && !storage.onboardingComplete) {
+  if (storage.onboardingComplete) {
+    console.log("[OSMail] Onboarding already completed, skipping wizard");
+    return;
+  }
+
+  const accountCount = await browser.osmail.getAccountCount();
+  if (accountCount === 0) {
     console.log("[OSMail] No accounts found, opening onboarding wizard");
     browser.tabs.create({ url: "onboarding/index.html" });
   }
