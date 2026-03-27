@@ -35,11 +35,11 @@ FinishedLabel=Thunderbird has been installed with OSMail configuration.%n%nLaunc
 
 [Files]
 ; Thunderbird MSI — extracted to temp, run silently
-Source: "staging\*.msi"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "..\staging\*.msi"; DestDir: "{tmp}"; Flags: deleteafterinstall
 ; Distribution files — policies + extensions
-Source: "staging\distribution\*"; DestDir: "{app}\distribution"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\staging\distribution\*"; DestDir: "{app}\distribution"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Version file
-Source: "staging\.thunderbird-version"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "..\staging\.thunderbird-version"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Run]
 ; Install Thunderbird MSI silently
