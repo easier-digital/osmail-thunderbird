@@ -68,8 +68,10 @@ var
   ExtDir: String;
   ThemeXPI: String;
   OnboardingXPI: String;
-  ThemeURI: String;
-  OnboardingURI: String;
+  ThemeURI: AnsiString;
+  OnboardingURI: AnsiString;
+  GHTheme: AnsiString;
+  GHOnboarding: AnsiString;
 begin
   if CurStep = ssPostInstall then
   begin
@@ -93,18 +95,16 @@ begin
       begin
         ThemeURI := 'file:///' + ThemeXPI;
         StringChangeEx(ThemeURI, '\', '/', True);
-        StringChangeEx(PoliciesContent,
-          'https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/osmail-theme.xpi',
-          ThemeURI, True);
+        GHTheme := 'https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/osmail-theme.xpi';
+        StringChangeEx(PoliciesContent, GHTheme, ThemeURI, True);
       end;
 
       if FileExists(OnboardingXPI) then
       begin
         OnboardingURI := 'file:///' + OnboardingXPI;
         StringChangeEx(OnboardingURI, '\', '/', True);
-        StringChangeEx(PoliciesContent,
-          'https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/osmail-onboarding.xpi',
-          OnboardingURI, True);
+        GHOnboarding := 'https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/osmail-onboarding.xpi';
+        StringChangeEx(PoliciesContent, GHOnboarding, OnboardingURI, True);
       end;
 
       SaveStringToFile(PoliciesFile, PoliciesContent, False);
