@@ -49,117 +49,123 @@ var osmail = class extends ExtensionAPI {
         },
 
         // ── Mail Account Creation ─────────────────────────────────
+        // All config written via Services.prefs to avoid WrappedNative
+        // errors when setting properties on XPCOM objects from experiments.
         async createMailAccount(email, config) {
           const errors = [];
-          let accountKey = null;
 
           try {
-            const { MailServices } = ChromeUtils.importESModule(
-              "resource:///modules/MailServices.sys.mjs"
-            );
-
             // nsMsgAuthMethod: passwordCleartext=3, OAuth2=10
             // nsMsgSocketType: plain=0, STARTTLS=2, SSL=3
             const authMethod = config.authMethod || 10;
 
-            // ── IMAP ──
-            console.log(`[OSMail] Creating IMAP server: ${config.imapHost}:${config.imapPort}`);
-            let inServer;
+            // ── Find next available keys ──
+            const existingAccounts = Services.prefs.getCharPref("mail.accountmanager.accounts", "");
+            const existingSmtp = Services.prefs.getCharPref("mail.smtpservers", "");
+
+            let serverNum = 1;
+            let serverKey;
+            do {
+              serverKey = `server${serverNum++}`;
+            } while (Services.prefs.prefHasUserValue(`mail.server.${serverKey}.type`));
+
+            let idNum = 1;
+            let idKey;
+            do {
+              idKey = `id${idNum++}`;
+            } while (Services.prefs.prefHasUserValue(`mail.identity.${idKey}.useremail`));
+
+            let acctNum = 1;
+            let acctKey;
+            do {
+              acctKey = `account${acctNum++}`;
+            } while (Services.prefs.prefHasUserValue(`mail.account.${acctKey}.server`));
+
+            let smtpNum = 1;
+            let smtpKey;
+            do {
+              smtpKey = `smtp${smtpNum++}`;
+            } while (existingSmtp.includes(smtpKey));
+
+            // ── IMAP Server ──
+            console.log(`[OSMail] Creating IMAP: ${serverKey} -> ${config.imapHost}:${config.imapPort}`);
             try {
-              inServer = MailServices.accounts.createIncomingServer(
-                email,
-                config.imapHost,
-                "imap"
-              );
-              inServer.port = config.imapPort || 993;
-              inServer.socketType = config.imapSocketType || 3;
-              inServer.authMethod = authMethod;
-              console.log(`[OSMail] IMAP server created: port=${inServer.port} socket=${inServer.socketType} auth=${inServer.authMethod}`);
+              const sp = `mail.server.${serverKey}`;
+              Services.prefs.setCharPref(`${sp}.type`, "imap");
+              Services.prefs.setCharPref(`${sp}.hostname`, config.imapHost);
+              Services.prefs.setIntPref(`${sp}.port`, config.imapPort || 993);
+              Services.prefs.setCharPref(`${sp}.userName`, email);
+              Services.prefs.setIntPref(`${sp}.socketType`, config.imapSocketType || 3);
+              Services.prefs.setIntPref(`${sp}.authMethod`, authMethod);
+              Services.prefs.setCharPref(`${sp}.name`, "OSMail");
+              console.log(`[OSMail] IMAP server prefs written: ${serverKey}`);
             } catch (e) {
               errors.push("IMAP: " + e.message);
-              console.error("[OSMail] IMAP creation failed:", e);
+              console.error("[OSMail] IMAP pref write failed:", e);
             }
 
             // ── Identity ──
-            let identity;
+            console.log(`[OSMail] Creating identity: ${idKey} -> ${email}`);
             try {
-              identity = MailServices.accounts.createIdentity();
-              identity.email = email;
-              console.log(`[OSMail] Identity created: ${email}`);
+              const ip = `mail.identity.${idKey}`;
+              Services.prefs.setCharPref(`${ip}.useremail`, email);
+              Services.prefs.setCharPref(`${ip}.smtpServer`, smtpKey);
+              Services.prefs.setBoolPref(`${ip}.valid`, true);
+              console.log(`[OSMail] Identity prefs written: ${idKey}`);
             } catch (e) {
               errors.push("Identity: " + e.message);
-              console.error("[OSMail] Identity creation failed:", e);
+              console.error("[OSMail] Identity pref write failed:", e);
             }
 
             // ── Account ──
-            if (inServer && identity) {
-              try {
-                const account = MailServices.accounts.createAccount();
-                account.incomingServer = inServer;
-                account.addIdentity(identity);
-                accountKey = account.key;
-                console.log(`[OSMail] Account created: ${accountKey}`);
+            console.log(`[OSMail] Creating account: ${acctKey}`);
+            try {
+              const ap = `mail.account.${acctKey}`;
+              Services.prefs.setCharPref(`${ap}.server`, serverKey);
+              Services.prefs.setCharPref(`${ap}.identities`, idKey);
 
-                try {
-                  MailServices.accounts.defaultAccount = account;
-                } catch (e) {
-                  console.log("[OSMail] Could not set default account:", e.message);
-                }
-              } catch (e) {
-                errors.push("Account: " + e.message);
-                console.error("[OSMail] Account linking failed:", e);
+              // Register account
+              const newAccounts = existingAccounts ? `${existingAccounts},${acctKey}` : acctKey;
+              Services.prefs.setCharPref("mail.accountmanager.accounts", newAccounts);
+
+              // Set as default
+              if (!Services.prefs.prefHasUserValue("mail.accountmanager.defaultaccount")) {
+                Services.prefs.setCharPref("mail.accountmanager.defaultaccount", acctKey);
               }
+              console.log(`[OSMail] Account prefs written: ${acctKey}`);
+            } catch (e) {
+              errors.push("Account: " + e.message);
+              console.error("[OSMail] Account pref write failed:", e);
             }
 
             // ── SMTP ──
-            // Use direct pref writes to avoid WrappedNative issues with
-            // outgoing server property setters
-            console.log(`[OSMail] Creating SMTP server: ${config.smtpHost}:${config.smtpPort}`);
+            console.log(`[OSMail] Creating SMTP: ${smtpKey} -> ${config.smtpHost}:${config.smtpPort}`);
             try {
-              // Find next available smtp key
-              const existingKeys = Services.prefs.getCharPref("mail.smtpservers", "");
-              let smtpNum = 1;
-              let smtpKey;
-              do {
-                smtpKey = `smtp${smtpNum++}`;
-              } while (existingKeys.includes(smtpKey));
+              const sp = `mail.smtpserver.${smtpKey}`;
+              Services.prefs.setCharPref(`${sp}.type`, "smtp");
+              Services.prefs.setCharPref(`${sp}.hostname`, config.smtpHost);
+              Services.prefs.setIntPref(`${sp}.port`, config.smtpPort || 587);
+              Services.prefs.setCharPref(`${sp}.username`, email);
+              Services.prefs.setIntPref(`${sp}.try_ssl`, config.smtpSocketType || 2);
+              Services.prefs.setIntPref(`${sp}.authMethod`, authMethod);
+              Services.prefs.setCharPref(`${sp}.description`, "OSMail");
 
-              // Write all prefs directly
-              const prefix = `mail.smtpserver.${smtpKey}`;
-              Services.prefs.setCharPref(`${prefix}.type`, "smtp");
-              Services.prefs.setCharPref(`${prefix}.hostname`, config.smtpHost);
-              Services.prefs.setIntPref(`${prefix}.port`, config.smtpPort || 587);
-              Services.prefs.setCharPref(`${prefix}.username`, email);
-              Services.prefs.setIntPref(`${prefix}.try_ssl`, config.smtpSocketType || 2);
-              Services.prefs.setIntPref(`${prefix}.authMethod`, authMethod);
-              Services.prefs.setCharPref(`${prefix}.description`, "OSMail");
-
-              // Register in the server list
-              const newKeys = existingKeys ? `${existingKeys},${smtpKey}` : smtpKey;
-              Services.prefs.setCharPref("mail.smtpservers", newKeys);
-
-              // Set as default
+              const newSmtp = existingSmtp ? `${existingSmtp},${smtpKey}` : smtpKey;
+              Services.prefs.setCharPref("mail.smtpservers", newSmtp);
               Services.prefs.setCharPref("mail.smtp.defaultserver", smtpKey);
-
-              // Link identity to this SMTP server
-              if (identity) {
-                identity.smtpServerKey = smtpKey;
-                console.log(`[OSMail] Identity linked to SMTP: ${smtpKey}`);
-              }
-
-              console.log(`[OSMail] SMTP server created via prefs: ${smtpKey} host=${config.smtpHost} port=${config.smtpPort} auth=${authMethod} socket=${config.smtpSocketType}`);
+              console.log(`[OSMail] SMTP prefs written: ${smtpKey}`);
             } catch (e) {
               errors.push("SMTP: " + e.message);
-              console.error("[OSMail] SMTP creation failed:", e);
+              console.error("[OSMail] SMTP pref write failed:", e);
             }
 
             if (errors.length > 0) {
-              console.warn("[OSMail] Account setup completed with errors:", errors);
-              return { success: accountKey !== null, accountKey, errors };
+              console.warn("[OSMail] Account setup had errors:", errors);
+              return { success: errors.length < 4, errors };
             }
 
-            console.log(`[OSMail] Mail account fully created for ${email}`);
-            return { success: true, accountKey };
+            console.log(`[OSMail] Mail account fully created: acct=${acctKey} server=${serverKey} id=${idKey} smtp=${smtpKey}`);
+            return { success: true, accountKey: acctKey };
           } catch (e) {
             console.error("[OSMail] createMailAccount failed:", e);
             return { success: false, error: e.message };
