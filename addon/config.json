@@ -8,8 +8,8 @@
   "tokenEndpoint": "https://auth.osmail.ca/application/o/token/",
   "redirectUri": "https://localhost",
   "scopes": {
-    "imap": "openid email profile",
-    "smtp": "openid email profile"
+    "imap": "openid email profile offline_access",
+    "smtp": "openid email profile offline_access"
   },
   "imap": {
     "hostname": "mx.osmail.ca",
