@@ -141,7 +141,7 @@ jobs:
         run: |
           $ver = "${{ steps.version.outputs.tb_version }}"
           & "C:\Program Files (x86)\Inno Setup 6\iscc.exe" `
-            /DAppVersion="$ver" `
+            /DMyAppVersion="$ver" `
             /O"." `
             installer/osmail-setup.iss
           $exe = "OSMail-Setup.exe"
