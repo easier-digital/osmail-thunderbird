@@ -87,12 +87,12 @@ if (Test-Path $srcDistDir) {
     if (Test-Path $policiesPath) {
         $extDir = Join-Path $tbDistDir 'extensions'
         $policiesJson = Get-Content $policiesPath -Raw
-        $themeXpi = Join-Path $extDir 'yourorg-theme@osmail.ca.xpi'
+        $themeXpi = Join-Path $extDir 'osmail-theme@osmail.ca.xpi'
         $idpXpi = Join-Path $extDir 'thunderbird-custom-idp@raa.xpi'
         if (Test-Path $themeXpi) {
             $themeUri = 'file:///' + $themeXpi.Replace('\', '/')
             $policiesJson = $policiesJson.Replace(
-                'https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/yourorg-theme.xpi',
+                'https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/osmail-theme.xpi',
                 $themeUri
             )
             Write-Log "Theme install_url set to: $themeUri"

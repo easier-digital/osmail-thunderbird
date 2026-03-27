@@ -19,7 +19,7 @@ python3 -m json.tool manifest.json > /dev/null 2>&1 || {
 mkdir -p ../distribution/extensions
 
 # Build XPI (contents at root of zip, not wrapped in a subdirectory)
-zip -r -FS ../distribution/extensions/yourorg-theme.xpi manifest.json icons/
+zip -r -FS ../distribution/extensions/osmail-theme.xpi manifest.json icons/
 
-echo "SHA256: $(sha256sum ../distribution/extensions/yourorg-theme.xpi)"
+echo "SHA256: $(sha256sum ../distribution/extensions/osmail-theme.xpi)"
 echo "Theme XPI built successfully."
