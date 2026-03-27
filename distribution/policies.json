@@ -1,8 +1,8 @@
 {
-  "_comment": "SETUP REQUIRED: Replace YOUR_ORG with your GitHub org. Replace __THEME_XPI_URL__ after first build.",
+  "_comment": "SETUP REQUIRED: Replace __THEME_XPI_URL__ after first build.",
   "policies": {
     "DisableAppUpdate": true,
-    "AppUpdateURL": "https://github.com/YOUR_ORG/thunderbird-osmail/releases",
+    "AppUpdateURL": "https://github.com/easier-digital/osmail-thunderbird/releases",
     "DisableTelemetry": true,
     "OfferToSaveLogins": false,
     "PasswordManagerEnabled": false,
@@ -13,7 +13,7 @@
       },
       "thunderbird-custom-idp@raa": {
         "installation_mode": "force_installed",
-        "install_url": "https://github.com/YOUR_ORG/thunderbird-osmail/releases/latest/download/thunderbird_custom_idp.xpi"
+        "install_url": "https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/thunderbird_custom_idp.xpi"
       }
     },
     "Preferences": {
