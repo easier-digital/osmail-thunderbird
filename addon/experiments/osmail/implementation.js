@@ -59,46 +59,53 @@ var osmail = class extends ExtensionAPI {
             const authMethod = config.authMethod || 10;
 
             // Create incoming IMAP server
+            // createIncomingServer(username, hostname, type)
             const inServer = MailServices.accounts.createIncomingServer(
               email,
               config.imapHost,
               "imap"
             );
             inServer.port = config.imapPort || 993;
-            inServer.socketType = config.imapSocketType || 3; // SSL
+            // socketType: 0=none, 2=STARTTLS, 3=SSL/TLS
+            inServer.socketType = config.imapSocketType || 3;
             inServer.authMethod = authMethod;
-            inServer.prettyName = "OSMail";
 
             // Create identity
             const identity = MailServices.accounts.createIdentity();
             identity.email = email;
-            identity.fullName = "";
 
-            // Create account
+            // Create account and link
             const account = MailServices.accounts.createAccount();
             account.incomingServer = inServer;
             account.addIdentity(identity);
 
-            // Set as default if it's the first account
-            if (MailServices.accounts.accounts.length === 1) {
-              MailServices.accounts.defaultAccount = account;
+            // Set as default if it's the first real account
+            try {
+              if (MailServices.accounts.accounts.length === 1) {
+                MailServices.accounts.defaultAccount = account;
+              }
+            } catch (e) {
+              console.log("[OSMail] Could not set default account:", e.message);
             }
 
             // Create outgoing (SMTP) server
             const smtpServer = MailServices.outgoingServer.createServer("smtp");
+            smtpServer.username = email;
             smtpServer.hostname = config.smtpHost;
             smtpServer.port = config.smtpPort || 587;
-            smtpServer.socketType = config.smtpSocketType || 2; // STARTTLS
+            smtpServer.socketType = config.smtpSocketType || 2;
             smtpServer.authMethod = authMethod;
-            smtpServer.username = email;
-            smtpServer.description = "OSMail SMTP";
 
-            // Link identity to SMTP server
+            // Link identity to outgoing server
             identity.smtpServerKey = smtpServer.key;
 
-            // Set as default SMTP if first
-            if (!MailServices.outgoingServer.defaultServer) {
-              MailServices.outgoingServer.defaultServer = smtpServer;
+            // Set as default outgoing server if first
+            try {
+              if (!MailServices.outgoingServer.defaultServer) {
+                MailServices.outgoingServer.defaultServer = smtpServer;
+              }
+            } catch (e) {
+              console.log("[OSMail] Could not set default outgoing server:", e.message);
             }
 
             console.log(`[OSMail] Mail account created for ${email}`);
