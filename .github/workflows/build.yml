@@ -33,14 +33,14 @@ jobs:
       - name: Record SHA256
         id: theme-hash
         run: |
-          SHA=$(sha256sum distribution/extensions/yourorg-theme.xpi | awk '{print $1}')
+          SHA=$(sha256sum distribution/extensions/osmail-theme.xpi | awk '{print $1}')
           echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
           echo "Theme XPI SHA256: $SHA"
 
       - uses: actions/upload-artifact@v4
         with:
           name: theme-xpi
-          path: distribution/extensions/yourorg-theme.xpi
+          path: distribution/extensions/osmail-theme.xpi
 
   # ── Job 2: Build Installer Package ─────────────────────────
   build-installer:
@@ -103,7 +103,7 @@ jobs:
       - name: Rename XPIs to extension IDs for sideloading
         shell: pwsh
         run: |
-          Rename-Item "staging/distribution/extensions/yourorg-theme.xpi" "yourorg-theme@osmail.ca.xpi"
+          Rename-Item "staging/distribution/extensions/osmail-theme.xpi" "osmail-theme@osmail.ca.xpi"
           Rename-Item "staging/distribution/extensions/thunderbird-custom-idp.xpi" "thunderbird-custom-idp@raa.xpi"
 
       - name: Copy distribution files
@@ -196,5 +196,5 @@ jobs:
             For Atera RMM deployment, use the PowerShell snippet in the README.
           files: |
             dist/*.zip
-            dist/yourorg-theme.xpi
+            dist/osmail-theme.xpi
             dist/thunderbird-custom-idp@raa.xpi
