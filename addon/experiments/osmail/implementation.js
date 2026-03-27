@@ -84,8 +84,8 @@ var osmail = class extends ExtensionAPI {
               MailServices.accounts.defaultAccount = account;
             }
 
-            // Create SMTP server
-            const smtpServer = MailServices.smtp.createServer();
+            // Create outgoing (SMTP) server
+            const smtpServer = MailServices.outgoingServer.createServer("smtp");
             smtpServer.hostname = config.smtpHost;
             smtpServer.port = config.smtpPort || 587;
             smtpServer.socketType = config.smtpSocketType || 2; // STARTTLS
@@ -97,8 +97,8 @@ var osmail = class extends ExtensionAPI {
             identity.smtpServerKey = smtpServer.key;
 
             // Set as default SMTP if first
-            if (!MailServices.smtp.defaultServer) {
-              MailServices.smtp.defaultServer = smtpServer;
+            if (!MailServices.outgoingServer.defaultServer) {
+              MailServices.outgoingServer.defaultServer = smtpServer;
             }
 
             console.log(`[OSMail] Mail account created for ${email}`);
@@ -142,8 +142,8 @@ var osmail = class extends ExtensionAPI {
               "resource:///modules/MailServices.sys.mjs"
             );
 
-            // nsIAbManager.CARDDAV_DIRECTORY_TYPE = 104
-            const CARDDAV_TYPE = 104;
+            // nsIAbManager.CARDDAV_DIRECTORY_TYPE = 102
+            const CARDDAV_TYPE = 102;
 
             const dirPrefId = MailServices.ab.newAddressBook(
               name,
