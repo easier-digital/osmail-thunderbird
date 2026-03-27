@@ -130,33 +130,36 @@ jobs:
           Rename-Item "staging/distribution/extensions/osmail-theme.xpi" "osmail-theme@osmail.ca.xpi"
           Rename-Item "staging/distribution/extensions/osmail-onboarding.xpi" "osmail-onboarding@osmail.ca.xpi"
 
-      - name: Copy distribution files
+      - name: Copy distribution files and version
         shell: pwsh
         run: |
           Copy-Item distribution/policies.json staging/distribution/ -Force
-
-      - name: Copy installer and version file
-        shell: pwsh
-        run: |
-          Copy-Item installer/install.ps1 staging/ -Force
           Copy-Item .thunderbird-version staging/ -Force
 
-      - name: Package zip
+      - name: Build installer with Inno Setup
         shell: pwsh
-        id: package
         run: |
           $ver = "${{ steps.version.outputs.tb_version }}"
-          $zipName = "thunderbird-osmail-$ver-win64.zip"
-          Compress-Archive -Path staging/* -DestinationPath $zipName -Force
-          $hash = (Get-FileHash $zipName -Algorithm SHA256).Hash
-          echo "zip_sha256=$hash" >> $env:GITHUB_OUTPUT
-          echo "zip_name=$zipName" >> $env:GITHUB_OUTPUT
-          Write-Host "Package SHA256: $hash"
+          & "C:\Program Files (x86)\Inno Setup 6\iscc.exe" `
+            /DAppVersion="$ver" `
+            /O"." `
+            installer/osmail-setup.iss
+          $exe = "OSMail-Setup.exe"
+          if (-not (Test-Path $exe)) {
+            Write-Error "Inno Setup failed — no output exe"
+            exit 1
+          }
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash
+          $size = (Get-Item $exe).Length
+          echo "exe_name=$exe" >> $env:GITHUB_OUTPUT
+          echo "exe_sha256=$hash" >> $env:GITHUB_OUTPUT
+          Write-Host "Installer built: $exe ($size bytes) SHA256: $hash"
+        id: package
 
       - uses: actions/upload-artifact@v4
         with:
-          name: installer-package
-          path: ${{ steps.package.outputs.zip_name }}
+          name: installer-exe
+          path: ${{ steps.package.outputs.exe_name }}
 
   # ── Job 3: Create GitHub Release ───────────────────────────
   release:
@@ -177,13 +180,13 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: installer-package
+          name: installer-exe
           path: dist/
 
       - name: Compute SHA256
         id: hash
         run: |
-          SHA=$(sha256sum dist/*.zip | awk '{print $1}')
+          SHA=$(sha256sum dist/OSMail-Setup.exe | awk '{print $1}')
           echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
 
       - name: Create release
@@ -195,17 +198,10 @@ jobs:
             ## OSMail Thunderbird ${{ steps.version.outputs.tb_version }}
 
             **Upstream Thunderbird version**: ${{ steps.version.outputs.tb_version }}
-            **Build date (UTC)**: ${{ github.event.repository.updated_at || 'see workflow run' }}
             **SHA256**: `${{ steps.hash.outputs.sha256 }}`
 
-            ### Deployment
-            Download the zip, extract, and run `install.ps1` as Administrator.
-            The installer deploys Thunderbird with OSMail enterprise configuration,
-            including OAuth2 authentication via Authentik and the OSMail brand theme.
-
-            ### What's included
-            - Thunderbird ${{ steps.version.outputs.tb_version }} MSI
-            - OSMail onboarding wizard (auto-configures email, calendar, contacts)
-            - OSMail branded theme
-            - Enterprise policies (updates disabled, telemetry off)
-          files: dist/*.zip
+            ### Install
+            Download **OSMail-Setup.exe** and run it. Thunderbird will be installed
+            with OSMail configuration. On first launch, enter your email address
+            and sign in — email, calendar, and contacts are configured automatically.
+          files: dist/OSMail-Setup.exe

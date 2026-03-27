@@ -129,9 +129,11 @@ var osmail = class extends ExtensionAPI {
               Services.prefs.setCharPref("mail.accountmanager.accounts", newAccounts);
 
               // Set as default
-              if (!Services.prefs.prefHasUserValue("mail.accountmanager.defaultaccount")) {
-                Services.prefs.setCharPref("mail.accountmanager.defaultaccount", acctKey);
-              }
+              Services.prefs.setCharPref("mail.accountmanager.defaultaccount", acctKey);
+
+              // Make TB open this account's inbox on startup
+              Services.prefs.setCharPref(`mail.server.${serverKey}.check_new_mail`, "true");
+              Services.prefs.setBoolPref("mail.biff.on_new_window", true);
               console.log(`[OSMail] Account prefs written: ${acctKey}`);
             } catch (e) {
               errors.push("Account: " + e.message);
