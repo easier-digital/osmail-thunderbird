@@ -75,19 +75,16 @@ jobs:
           name: theme-xpi
           path: staging/distribution/extensions/
 
-      - name: Download thunderbird-custom-idp XPI
+      - name: Build thunderbird-custom-idp XPI with baked config
         shell: pwsh
         run: |
-          $release = Invoke-RestMethod "https://api.github.com/repos/raa-org/thunderbird-custom-idp/releases/latest"
-          $asset = $release.assets | Where-Object { $_.name -like "*.xpi" } | Select-Object -First 1
-          if (-not $asset) {
-            Write-Error "No XPI asset found in thunderbird-custom-idp latest release"
-            exit 1
-          }
-          Write-Host "Downloading: $($asset.name) from $($asset.browser_download_url)"
-          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "staging/distribution/extensions/thunderbird-custom-idp.xpi" -UseBasicParsing
+          git clone --depth 1 https://github.com/raa-org/thunderbird-custom-idp.git custom-idp-src
+          $template = Get-Content oauthpatch-template.json -Raw
+          $config = $template.Replace('__OAUTH_CLIENT_SECRET__', '${{ secrets.OAUTH_CLIENT_SECRET }}')
+          Set-Content -Path custom-idp-src/src/config.json -Value $config -NoNewline
+          Compress-Archive -Path custom-idp-src/src/* -DestinationPath staging/distribution/extensions/thunderbird-custom-idp.xpi -Force
           $size = (Get-Item "staging/distribution/extensions/thunderbird-custom-idp.xpi").Length
-          Write-Host "custom-idp XPI downloaded: $size bytes"
+          Write-Host "custom-idp XPI built with baked config: $size bytes"
 
       - name: Download Thunderbird MSI
         shell: pwsh
@@ -103,20 +100,16 @@ jobs:
           }
           Write-Host "MSI downloaded: $size bytes"
 
-      - name: Substitute OAuth secret
+      - name: Rename XPIs to extension IDs for sideloading
         shell: pwsh
         run: |
-          $template = Get-Content oauthpatch-template.json -Raw
-          $patched = $template.Replace('__OAUTH_CLIENT_SECRET__', '${{ secrets.OAUTH_CLIENT_SECRET }}')
-          Set-Content -Path staging/distribution/oauthpatch.json -Value $patched -NoNewline
+          Rename-Item "staging/distribution/extensions/yourorg-theme.xpi" "yourorg-theme@osmail.ca.xpi"
+          Rename-Item "staging/distribution/extensions/thunderbird-custom-idp.xpi" "thunderbird-custom-idp@raa.xpi"
 
       - name: Copy distribution files
         shell: pwsh
         run: |
           Copy-Item distribution/policies.json staging/distribution/ -Force
-          if (Test-Path distribution/extensions/.gitkeep) {
-            Copy-Item distribution/extensions/.gitkeep staging/distribution/extensions/ -Force
-          }
 
       - name: Copy installer and version file
         shell: pwsh
@@ -144,7 +137,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: custom-idp-xpi
-          path: staging/distribution/extensions/thunderbird-custom-idp.xpi
+          path: staging/distribution/extensions/thunderbird-custom-idp@raa.xpi
 
   # ── Job 3: Create GitHub Release ───────────────────────────
   release:
@@ -204,4 +197,4 @@ jobs:
           files: |
             dist/*.zip
             dist/yourorg-theme.xpi
-            dist/thunderbird-custom-idp.xpi
+            dist/thunderbird-custom-idp@raa.xpi

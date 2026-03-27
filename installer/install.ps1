@@ -85,18 +85,5 @@ if (Test-Path $srcDistDir) {
     Write-Log 'WARNING: No distribution directory found in staging.'
 }
 
-# --- Deploy oauthpatch.json to default profile ---
-$oauthPatch = Join-Path $srcDistDir 'oauthpatch.json'
-if (Test-Path $oauthPatch) {
-    $profileDefaults = Join-Path $tbInstallDir 'defaults\profile'
-    if (-not (Test-Path $profileDefaults)) {
-        New-Item -ItemType Directory -Path $profileDefaults -Force | Out-Null
-    }
-    Copy-Item -Path $oauthPatch -Destination $profileDefaults -Force
-    Write-Log 'oauthpatch.json deployed to defaults\profile.'
-} else {
-    Write-Log 'INFO: No oauthpatch.json found — skipping profile defaults.'
-}
-
 Write-Log 'OSMail Thunderbird installation completed successfully.'
 exit 0
