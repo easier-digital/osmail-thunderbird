@@ -75,6 +75,20 @@ jobs:
           name: theme-xpi
           path: staging/distribution/extensions/
 
+      - name: Download thunderbird-custom-idp XPI
+        shell: pwsh
+        run: |
+          $release = Invoke-RestMethod "https://api.github.com/repos/raa-org/thunderbird-custom-idp/releases/latest"
+          $asset = $release.assets | Where-Object { $_.name -like "*.xpi" } | Select-Object -First 1
+          if (-not $asset) {
+            Write-Error "No XPI asset found in thunderbird-custom-idp latest release"
+            exit 1
+          }
+          Write-Host "Downloading: $($asset.name) from $($asset.browser_download_url)"
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "staging/distribution/extensions/thunderbird-custom-idp.xpi" -UseBasicParsing
+          $size = (Get-Item "staging/distribution/extensions/thunderbird-custom-idp.xpi").Length
+          Write-Host "custom-idp XPI downloaded: $size bytes"
+
       - name: Download Thunderbird MSI
         shell: pwsh
         run: |
@@ -127,6 +141,11 @@ jobs:
           name: installer-package
           path: ${{ steps.package.outputs.zip_name }}
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: custom-idp-xpi
+          path: staging/distribution/extensions/thunderbird-custom-idp.xpi
+
   # ── Job 3: Create GitHub Release ───────────────────────────
   release:
     runs-on: ubuntu-latest
@@ -152,6 +171,11 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: theme-xpi
+          path: dist/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: custom-idp-xpi
           path: dist/
 
       - name: Compute SHA256
@@ -180,3 +204,4 @@ jobs:
           files: |
             dist/*.zip
             dist/yourorg-theme.xpi
+            dist/thunderbird-custom-idp.xpi

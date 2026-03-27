@@ -13,7 +13,7 @@
       },
       "thunderbird-custom-idp@raa": {
         "installation_mode": "force_installed",
-        "install_url": "https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/thunderbird_custom_idp.xpi"
+        "install_url": "https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/thunderbird-custom-idp.xpi"
       }
     },
     "Preferences": {
