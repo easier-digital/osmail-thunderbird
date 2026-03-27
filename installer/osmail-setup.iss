@@ -47,7 +47,7 @@ Filename: "msiexec.exe"; Parameters: "/i ""{tmp}\{code:GetMSIName}"" /qn INSTALL
 
 [Code]
 var
-  TBVersion: String;
+  TBVersion: AnsiString;
 
 function GetMSIName(Param: String): String;
 begin
@@ -64,7 +64,7 @@ procedure CurStepChanged(CurStep: TSetupStep);
 var
   VersionFile: String;
   PoliciesFile: String;
-  PoliciesContent: String;
+  PoliciesContent: AnsiString;
   ExtDir: String;
   ThemeXPI: String;
   OnboardingXPI: String;
