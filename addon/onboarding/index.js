@@ -78,8 +78,9 @@ $("#email").addEventListener("keydown", (e) => {
   }
 });
 
-// Done button closes the tab
+// Done button restarts Thunderbird via background script
 $("#btn-done").addEventListener("click", async () => {
-  const tab = await browser.tabs.getCurrent();
-  browser.tabs.remove(tab.id);
+  $("#btn-done").textContent = "Restarting...";
+  $("#btn-done").disabled = true;
+  browser.runtime.sendMessage({ action: "restart" });
 });
