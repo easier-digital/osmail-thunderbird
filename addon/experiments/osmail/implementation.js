@@ -251,6 +251,18 @@ var osmail = class extends ExtensionAPI {
           } catch (e) {
             return 0;
           }
+        },
+
+        // ── Restart Thunderbird ───────────────────────────────────
+        async restartApp() {
+          try {
+            const start = Services.startup;
+            start.quit(start.eRestart | start.eAttemptQuit);
+            return { success: true };
+          } catch (e) {
+            console.error("[OSMail] restart failed:", e);
+            return { success: false, error: e.message };
+          }
         }
       }
     };

@@ -100,6 +100,13 @@
         "async": true,
         "description": "Get the number of configured mail accounts.",
         "parameters": []
+      },
+      {
+        "name": "restartApp",
+        "type": "function",
+        "async": true,
+        "description": "Restart Thunderbird.",
+        "parameters": []
       }
     ]
   }

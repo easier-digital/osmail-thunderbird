@@ -58,6 +58,9 @@ browser.runtime.onMessage.addListener(async (message) => {
     const count = await browser.osmail.getAccountCount();
     return { hasAccount: count > 0 };
   }
+  if (message.action === "restart") {
+    return browser.osmail.restartApp();
+  }
 });
 
 async function handleSetup(email) {
