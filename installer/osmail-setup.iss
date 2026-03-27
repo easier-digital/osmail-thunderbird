@@ -65,9 +65,9 @@ var
   VersionFile: String;
   PoliciesFile: String;
   PoliciesContent: AnsiString;
-  ExtDir: String;
-  ThemeXPI: String;
-  OnboardingXPI: String;
+  ExtDir: AnsiString;
+  ThemeXPI: AnsiString;
+  OnboardingXPI: AnsiString;
   ThemeURI: AnsiString;
   OnboardingURI: AnsiString;
   GHTheme: AnsiString;
