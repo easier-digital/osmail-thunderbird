@@ -81,6 +81,33 @@ if (Test-Path $srcDistDir) {
     }
     Copy-Item -Path (Join-Path $srcDistDir '*') -Destination $tbDistDir -Recurse -Force
     Write-Log 'Distribution files deployed.'
+
+    # --- Rewrite policies.json with local file:/// URLs for extensions ---
+    $policiesPath = Join-Path $tbDistDir 'policies.json'
+    if (Test-Path $policiesPath) {
+        $extDir = Join-Path $tbDistDir 'extensions'
+        $policiesJson = Get-Content $policiesPath -Raw
+        $themeXpi = Join-Path $extDir 'yourorg-theme@osmail.ca.xpi'
+        $idpXpi = Join-Path $extDir 'thunderbird-custom-idp@raa.xpi'
+        if (Test-Path $themeXpi) {
+            $themeUri = 'file:///' + $themeXpi.Replace('\', '/')
+            $policiesJson = $policiesJson.Replace(
+                'https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/yourorg-theme.xpi',
+                $themeUri
+            )
+            Write-Log "Theme install_url set to: $themeUri"
+        }
+        if (Test-Path $idpXpi) {
+            $idpUri = 'file:///' + $idpXpi.Replace('\', '/')
+            $policiesJson = $policiesJson.Replace(
+                'https://github.com/easier-digital/osmail-thunderbird/releases/latest/download/thunderbird-custom-idp%40raa.xpi',
+                $idpUri
+            )
+            Write-Log "custom-idp install_url set to: $idpUri"
+        }
+        Set-Content -Path $policiesPath -Value $policiesJson -NoNewline
+        Write-Log 'policies.json updated with local file:/// URLs.'
+    }
 } else {
     Write-Log 'WARNING: No distribution directory found in staging.'
 }
